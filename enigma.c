@@ -312,10 +312,8 @@ trace_encrypt(char c)
     /* andata nei tre rotori */
     c = rotor_forward(c, &e.rotors[RIGHT]);
     steps.after_R_rotor = c;
-
     c = rotor_forward(c, &e.rotors[MIDDLE]);
     steps.after_M_rotor = c;
-
     c = rotor_forward(c, &e.rotors[LEFT]);
     steps.after_L_rotor = c;
 
@@ -326,19 +324,16 @@ trace_encrypt(char c)
     /* ritorno nei tre rotori */
     c = rotor_backward(c, &e.rotors[LEFT]);
     steps.after_L_rotor_back = c;
-
     c = rotor_backward(c, &e.rotors[MIDDLE]);
     steps.after_M_rotor_back = c;
-
     c = rotor_backward(c, &e.rotors[RIGHT]);
     steps.after_R_rotor_back = c;
-
+    
     /* plugboard in uscita */
     c = enter_plugboard(c, &e);
     steps.after_plugboard_2 = c;
 
     steps.output_char = c;
-
     return steps;
 }
     

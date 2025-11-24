@@ -22,7 +22,7 @@ animation: shared
 		exit 1; \
 	fi
 	@echo "using $$(which python)..."
-	manim -pql animation/main.py Enigma
+	manim -p animation/main.py Enigma
 
 clean:
 	rm -f build/enigma*

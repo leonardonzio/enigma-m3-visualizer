@@ -4,7 +4,7 @@ Implementation of the Enigma M3 cipher machine with interactive configuration, a
 
 Example of video generated passing the letter H:
 
-![gif](imgsgif/enigma.gif)
+![gif](enigma.gif)
 
 ## Dependencies
 

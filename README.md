@@ -2,9 +2,9 @@
 
 Implementation of the Enigma M3 cipher machine with interactive configuration, and Manim visualization.
 
-| <img src="imgsgif/enigma-m3.jpg" width="350"/> |
-|:--:| 
-| *Enigma M3, Vienna Technical Museum* |
+Example of video generated passing the letter H:
+
+![gif](imgsgif/enigma.gif)
 
 ## Dependencies
 
@@ -66,8 +66,6 @@ The animation:
 3. renders the video to media/videos/...
 
 The animation uses the ctypes library to interface itself with the C simulator
-
-![gif](imgsgif/enigma.gif)
 
 ## Testing
 

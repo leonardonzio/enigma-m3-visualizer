@@ -2,7 +2,7 @@
 
 Implementation of the Enigma M3 cipher machine with interactive configuration, and Manim visualization.
 
-| <img src="enigma-m3.jpg" width="350"/> |
+| <img src="imgsgif/enigma-m3.jpg" width="350"/> |
 |:--:| 
 | *Enigma M3, Vienna Technical Museum* |
 
@@ -54,8 +54,9 @@ make animation
 or with specific rendering options:
 
 ```bash
-manim -pql main.py Enigma # Render at 1080p, 60 fps
-manim -pqh main.py Enigma # Render at 4K
+manim -pql main.py Enigma # Render at 480p15fps
+manim -pqh main.py Enigma # Render at 720p30fps
+manim -pqh main.py Enigma # Render at 1080p60fps
 ```
 
 The animation:
@@ -65,6 +66,8 @@ The animation:
 3. renders the video to media/videos/...
 
 The animation uses the ctypes library to interface itself with the C simulator
+
+![gif](imgsgif/enigma.gif)
 
 ## Testing
 

@@ -52,51 +52,66 @@ class EncryptionSteps(ctypes.Structure):
             f"Output char:          {self.output_char.decode('utf-8')}"
         )
 
+
 class Enigma(Scene):
+
     def create_rotor(
-        self, 
+        self,
         wiring: Wiring,
         outer_radius: float = 1.4,
         inner_radius: float = 1.2,
         font: str = "Iosevka",
         font_size: int = 20,
-        letter_color:ManimColor = WHITE,
-        orientation: str = "upright"  # upright, radial, tangent
-        ) -> VGroup:
-        
+        letter_color: ManimColor = WHITE,
+        orientation: str = "upright",  # upright, radial, tangent
+    ) -> VGroup:
         # base annulus (the rotor face as a ring)
         ring = Annulus(inner_radius=inner_radius, outer_radius=outer_radius)
         ring.set_fill(GRAY_E, opacity=1.0).set_stroke(GRAY_D, width=2)
 
-        highlight = Annulus(inner_radius=(inner_radius+outer_radius)/2 * 0.95,
-                            outer_radius=(inner_radius+outer_radius)/2 * 1.05)
+        highlight = Annulus(
+            inner_radius=(inner_radius + outer_radius) / 2 * 0.95,
+            outer_radius=(inner_radius + outer_radius) / 2 * 1.05,
+        )
         highlight.set_fill(GRAY_C, opacity=0.25).set_stroke(width=0)
 
-        # Letters placed along the midline of the annulus
         letters = VGroup()
-        r_mid = 0.5 * (inner_radius + outer_radius)
-        n = len(wiring.value) # usually 26 ?
-        
-        for i, ch in enumerate(wiring.value):
-            # angle starts at top (PI/2) and goes clockwise ( -i)
-            angle = (PI/2) - i * (PI*2/n) 
-            pos = np.array([np.cos(angle), np.sin(angle), 0.0]) * r_mid
+        indices = VGroup()
 
+        r_mid = 0.5 * (inner_radius + outer_radius)
+        r_index = outer_radius + 0.15  # distance of the 0..25 labels from center
+        n = len(wiring.value)       # usually 26
+
+        for i, ch in enumerate(wiring.value):
+            # angle starts at top (PI/2) and goes clockwise (-i)
+            angle = (PI / 2) - i * (PI * 2 / n)
+
+            # position of the letter
+            pos_letter = np.array([np.cos(angle), np.sin(angle), 0.0]) * r_mid
             t = Text(ch, font=font, font_size=font_size, weight=BOLD)
             t.set_color(letter_color)
             t.set_stroke(BLACK, width=0.6, opacity=0.7)
-           
-            # orientation isnt upright
+
+            # optional orientation for letters
             if orientation == "radial":
                 t.rotate(angle)
             elif orientation == "tangent":
-                t.rotate(angle - PI/2)
-
-            t.move_to(pos)
-
+                t.rotate(angle - PI / 2)
+            t.move_to(pos_letter)
             letters.add(t)
 
-        return VGroup(ring, highlight, letters)
+            # position of the numeric index (always upright)
+            pos_index = np.array([np.cos(angle), np.sin(angle), 0.0]) * r_index
+            idx = Text(str(i), font=font, font_size=int(font_size * 0.6), weight=BOLD)
+            idx.set_color(BLUE)
+            idx.set_stroke(BLACK, width=0.6, opacity=0.7)
+            idx.move_to(pos_index)
+            indices.add(idx)
+
+        # rotor[0] = ring, rotor[1] = highlight, rotor[2] = letters, rotor[3] = indices
+        return VGroup(ring, highlight, letters, indices)
+
+
 
     def update_content(
         self,
@@ -233,11 +248,15 @@ class Enigma(Scene):
         self.update_content(t1, f"Tuttavia anche l'uscita è sfalsata.\nIl segnale esce dal contatto {Wiring.ROTOR_III.value[idx_input_stepped]} (indice {character_alphabet_index(Wiring.ROTOR_III.value[idx_input_stepped])}),\nma siccome tutto il rotore è ruotato, va sottratto l'offset: {character_alphabet_index(Wiring.ROTOR_III.value[idx_input_stepped])} - 1 = {character_alphabet_index(after_R_rotor)}", "text")
         self.wait(3)
 
-        self.update_content(t1, f"L'indice {character_alphabet_index(after_R_rotor)} corrisponde alla lettera '{after_R_rotor}'.\nQuindi, a causa di un singolo step, la lettera '{input_char}' è stata trasformata in '{after_R_rotor}'\ninvece che in '{Wiring.ROTOR_III.value[idx_input_stepped]}'.\nIl segnale '{after_R_rotor}' ora prosegue verso il rotore successivo", "text")
+        self.update_content(t1, f"L'indice {character_alphabet_index(after_R_rotor)}, alfabeticamente corrisponde alla lettera '{after_R_rotor}'.\nQuindi, a causa di un singolo step, la lettera '{input_char}' è stata trasformata in '{after_R_rotor}'\ninvece che in '{Wiring.ROTOR_III.value[idx_input_stepped]}'.\nIl segnale '{after_R_rotor}' ora prosegue verso il rotore successivo", "text")
         self.wait(3)
 
-        letter_rotor = rotor_r[2][Wiring.ROTOR_III.value.index(after_R_rotor)]
-        self.play(letter_rotor.animate.set_color(YELLOW))
+        idx = Wiring.ROTOR_III.value.index(after_R_rotor)
+        letters = rotor_r[2]
+        letter_rotor = letters[idx]
+        self.play(
+            letter_rotor.animate.set_color(YELLOW),
+        )
         self.wait(3)
         
         self.play(Transform(input_char_t, letter_rotor))
@@ -288,8 +307,16 @@ class Enigma(Scene):
         )
         self.wait(3)
 
-        letter_rotor = rotor_m[2][character_alphabet_index(after_R_rotor)]
-        self.play(letter_rotor.animate.set_color(YELLOW))
+
+        idx = character_alphabet_index(after_R_rotor)
+        letters = rotor_m[2]
+        indices = rotor_m[3]
+        letter_rotor = letters[idx]
+        index_label = indices[idx]
+        self.play(
+            letter_rotor.animate.set_color(YELLOW),
+            index_label.animate.set_color(YELLOW),
+        )
         self.wait(3)
         
         self.play(Transform(after_R_rotor_t, letter_rotor))
@@ -334,8 +361,15 @@ class Enigma(Scene):
         )
         self.wait(3)
 
-        letter_rotor = rotor_l[2][character_alphabet_index(after_M_rotor)]
-        self.play(letter_rotor.animate.set_color(YELLOW))
+        idx = character_alphabet_index(after_M_rotor)
+        letters = rotor_l[2]
+        indices = rotor_l[3]
+        letter_rotor = letters[idx]
+        index_label = indices[idx]
+        self.play(
+            letter_rotor.animate.set_color(YELLOW),
+            index_label.animate.set_color(YELLOW),
+        )
         self.wait(3)
         
         self.play(Transform(after_M_rotor_t, letter_rotor))
@@ -380,11 +414,18 @@ class Enigma(Scene):
         )
         self.wait(3)
 
-        reflector_letter = reflector[2][character_alphabet_index(after_L_rotor)]
-        self.play(reflector_letter.animate.set_color(YELLOW))
+        idx = character_alphabet_index(after_L_rotor)
+        letters = reflector[2]
+        indices = reflector[3]
+        letter_reflector = letters[idx]
+        index_label = indices[idx]
+        self.play(
+            letter_reflector.animate.set_color(YELLOW),
+            index_label.animate.set_color(YELLOW),
+        )
         self.wait(3)
 
-        self.play(Transform(after_L_rotor_t, reflector_letter))
+        self.play(Transform(after_L_rotor_t, letter_reflector))
         self.wait(3)
 
         # ritorno attraverso i rotori e plugboard, fino alla lampadina finale

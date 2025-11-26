@@ -2,7 +2,7 @@
 
 Implementation of the Enigma M3 cipher machine with interactive configuration, and Manim visualization.
 
-Example of video generated passing the letter H:
+Example of video generated passing the letter T:
 
 ![gif](enigma.gif)
 

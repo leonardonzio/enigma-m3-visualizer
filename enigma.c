@@ -177,11 +177,8 @@ step_rotors(Enigma *e)
 static char 
 enter_plugboard (char c, const Enigma *e)
 {
-    for (int i = 0; i < ALPHABET_SIZE; i++){
-        if (c == e->plugboard.wiring[i])
-            return INDEX_TO_C(i);
-    }
-    return c;
+    // it' a symmetric plugboard, so a simple mapping works.
+    return e->plugboard.wiring[C_TO_INDEX(c)];
 }
 
 static void 
@@ -271,22 +268,24 @@ choose_plugboard(Plugboard *plugboard)
         int a_idx = C_TO_INDEX(a);
         int b_idx = C_TO_INDEX(b);
 
-        // restore previous partners of a and b
         char a_plug = plugboard->wiring[a_idx];
         char b_plug = plugboard->wiring[b_idx];
+        int pairs_removed = 0; // figure out how many distinct existing pairs it's breaking
+
         if (a_plug != a) {
             plugboard->wiring[C_TO_INDEX(a_plug)] = a_plug;
             printf("Removed old pair: %c-%c\n", a, a_plug);
+            pairs_removed++;
         }
-        if (b_plug != b) {
+        if (b_plug != b && b_plug != a) {
             plugboard->wiring[C_TO_INDEX(b_plug)] = b_plug;
             printf("Removed old pair: %c-%c\n", b, b_plug);
+            pairs_removed++;
         }
 
-        // apply
         plugboard->wiring[a_idx] = b;
         plugboard->wiring[b_idx] = a;
-        pair_count++;
+        pair_count = pair_count - pairs_removed + 1;
         printf("Swapped %c <-> %c. (%d/10 pairs)\n", a, b, pair_count);
     }
 }
@@ -390,7 +389,7 @@ encrypt_word (Enigma *e, const char *word, char *encrypted_word)
         
         /* enter the plugboard */
         encrypted_char = enter_plugboard(encrypted_char, e);
-        printf("encrypted character: %c -> %c\n", c, encrypted_char);
+        printf("encrypted character: %c -> %c\n", word[i], encrypted_char);
 
         encrypted_word[i] = encrypted_char;
 	}

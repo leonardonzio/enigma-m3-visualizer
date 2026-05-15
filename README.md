@@ -1,6 +1,6 @@
 # Enigma M3 Machine Simulator And Viewer
 
-Implementation of the Enigma M3 cipher machine with interactive configuration, and Manim visualization.
+Implementation of the Enigma M3 cipher machine in C with interactive configuration and a Manim-based step by step visualization of the encryption signal path.
 
 Example of video generated passing the letter T:
 
@@ -8,85 +8,104 @@ Example of video generated passing the letter T:
 
 ## Dependencies
 
-- Python
-- Manim
+- **C compiler**
+- **python** w/ **Manim**
 
-```bash
-python -m venv venv-manim       # setup a virtual environment
-source venv-manim/bin/activate  # source it
-pip install manim               # install the manim library needed for the animation
-```
+    ```bash
+    python -m venv venv-manim       # create a virtual environment
+    source venv-manim/bin/activate  # activate it
+    pip install manim               # install the Manim library
+    ```
+
+    > **Note:** Manim also requires system-level dependencies (Cairo, Pango, LaTeX, FFmpeg).
+    > See the [official Manim installation guide](https://docs.manim.community/en/stable/installation.html).
+
+- **iosevka** font for the animation
 
 ## Usage
 
 ### CLI Encryption
 
-Run the compiled executable:
+Compile and run the standalone executable:
 
 ```bash
 make run
 ```
 
-The simulator will prompt you to:
-1. choose a plugboard configuration
-2. choose a reflector
-3. choose the three rotors
-4. what word to encrypt/decrypt
+The simulator will prompt you to configure the machine interactively:
+
+1. Choose a plugboard configuration (up to 10 letter pairs)
+2. Choose the reflector
+3. Choose three rotors with relative starting positions (0–25) and ring settings (0–25)
+4. Enter a word to encrypt/decrypt
+
+> **Enigma is symmetric:** encrypting a ciphertext with the same settings produces the original plaintext.
 
 ### Manim Animation
 
-The animation script (`main.py`) loads the shared library and visualizes the encryption of a single character through the rotor system.
+The animation script (`main.py`) loads the shared library (`build/enigma.so`), prompts the user to configure the machine and visualizes the signal path of a single character through the machine.
 
-#### Setup
-
-Ensure the shared library is built:
+#### Build the shared library
 
 ```bash
 make shared
 ```
 
-#### Running the animation
+#### Run the animation
 
 ```bash
 make animation
 ```
 
-or with specific rendering options:
+or invoke Manim directly with a specific quality preset:
 
 ```bash
-manim -pql main.py Enigma # Render at 480p15fps
-manim -pqh main.py Enigma # Render at 720p30fps
-manim -pqh main.py Enigma # Render at 1080p60fps
+manim -pql main.py Enigma   # 480p 15fps  (fast preview)
+manim -pqm main.py Enigma   # 720p 30fps  (medium)
+manim -pqh main.py Enigma   # 1080p 60fps (high quality)
 ```
 
 The animation:
 
-1. prompts for a single letter to demonstrate the encrypting process
-2. visualize step-by-step the signal path through rotors
-3. renders the video to media/videos/...
+1. prompts you to configure the machine
+2. asks you a letter to encrypt
+3. renders a video of a step by step signal path animation
 
-The animation uses the ctypes library to interface itself with the C simulator
+## Machine Configuration
+
+The simulator supports the following historical components:
+
+### Rotors
+
+| Name | Wiring | Notch |
+|------|--------|-------|
+| Rotor I | EKMFLGDQVZNTOWYHXUSPAIBRCJ | Q |
+| Rotor II | AJDKSIRUXBLHWTMCQGZNPYFVOE | E |
+| Rotor III | BDFHJLCPRTXVZNYEIWGAKMUSQO | V |
+| Rotor IV | ESOVPZJAYQUIRHXLNFTGKDCMWB | J |
+| Rotor V | VZBRGITYUPSDNHLXAWMJQOFECK | Z |
+
+### Reflectors
+
+| Name | Wiring |
+|------|--------|
+| Reflector B | YRUHQSLDPXNGOKMIEBFZCWVJAT |
+| Reflector C | FVPJIAOYEDRZXWGCTKUQSBNMHL |
+
 
 ## Testing
 
-The implementation has been tested against two online Enigma simulator:
+The implementation has been tested against two online Enigma simulators:
 
-- https://www.101computing.net/enigma-machine-emulator/
-- https://www.cachesleuth.com/enigma.html
-
-## Makefile Targets
-
-| Target | Description |
-|--------|-------------|
-| `make all` or `make` | Compile standalone executable to _build/enigma_ |
-| `make run` | Build and run the standalone CLI |
-| `make shared` | Compile shared library to _build/enigma.so_ |
-| `make animation` | Run the animation |
-| `make clean` | Remove compiled binaries |
-
+- <https://www.101computing.net/enigma-machine-emulator/>
+- <https://www.cachesleuth.com/enigma.html>
 
 ## References
 
 - [Cipher Machines and Cryptology](https://www.ciphermachinesandcryptology.com/en/enigmatech.htm) – Enigma technical details
 - [Codes and Ciphers](https://www.codesandciphers.org.uk/enigma/rotorspec.htm) – Rotor specifications
-- The Manim Community Developers. (2025). Manim – Mathematical Animation Framework (Version v0.19.0) [Computer software]. https://www.manim.community/
+- The Manim Community Developers. (2025). *Manim – Mathematical Animation Framework* [Computer software]. <https://www.manim.community/>
+
+# License
+
+MIT license

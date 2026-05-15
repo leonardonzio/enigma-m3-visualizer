@@ -3,67 +3,98 @@ from manim import *
 import ctypes
 
 def character_alphabet_index(char: str):
-    return Wiring.ALPHABET.value.index(char)
+    return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".index(char)
 
 def alphabet_character_at_index(index: int):
-    return Wiring.ALPHABET.value[index]
+    return "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[index]
 
-class Wiring(Enum):
-    """
-    enum to match the rotor/reflector wirings in enigma library
-    """
-    ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    ROTOR_I = "EKMFLGDQVZNTOWYHXUSPAIBRCJ"
-    ROTOR_II = "AJDKSIRUXBLHWTMCQGZNPYFVOE"
-    ROTOR_III = "BDFHJLCPRTXVZNYEIWGAKMUSQO"
-    REFLECTOR_B = "YRUHQSLDPXNGOKMIEBFZCWVJAT"
+# wiring constants
+ROTOR_WIRINGS = {
+    "Rotor I":   "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+    "Rotor II":  "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+    "Rotor III": "BDFHJLCPRTXVZNYEIWGAKMUSQO",
+    "Rotor IV":  "ESOVPZJAYQUIRHXLNFTGKDCMWB",
+    "Rotor V":   "VZBRGITYUPSDNHLXAWMJQOFECK",
+}
+REFLECTOR_WIRINGS = {
+    "Reflector B": "YRUHQSLDPXNGOKMIEBFZCWVJAT",
+    "Reflector C": "FVPJIAOYEDRZXWGCTKUQSBNMHL",
+}
 
-
+# ctypes definitions
 class EncryptionSteps(ctypes.Structure):
-    """
-    struct to match EncryptionSteps in enigma.c
-    """
+    """Mirrors EncryptionSteps in enigma.c"""
     _fields_ = [
-        ('input_char', ctypes.c_char),
-        ('after_plugboard_1', ctypes.c_char),
-        ('after_R_rotor', ctypes.c_char),
-        ('after_M_rotor', ctypes.c_char),
-        ('after_L_rotor', ctypes.c_char),
-        ('after_reflector', ctypes.c_char),
-        ('after_L_rotor_back', ctypes.c_char),
-        ('after_M_rotor_back', ctypes.c_char),
-        ('after_R_rotor_back', ctypes.c_char),
-        ('after_plugboard_2', ctypes.c_char),
-        ('output_char', ctypes.c_char)
+        ('input_char',       ctypes.c_char),
+        ('after_plugboard_1',ctypes.c_char),
+        ('after_R_rotor',    ctypes.c_char),
+        ('after_M_rotor',    ctypes.c_char),
+        ('after_L_rotor',    ctypes.c_char),
+        ('after_reflector',  ctypes.c_char),
+        ('after_L_rotor_back',ctypes.c_char),
+        ('after_M_rotor_back',ctypes.c_char),
+        ('after_R_rotor_back',ctypes.c_char),
+        ('after_plugboard_2',ctypes.c_char),
+        ('output_char',      ctypes.c_char),
     ]
-    
+
     def __str__(self) -> str:
+        d = lambda b: b.decode('utf-8')
         return (
-            f"Input char:           {self.input_char.decode('utf-8')}\n"
-            f"After plugboard 1:    {self.after_plugboard_1.decode('utf-8')}\n"
-            f"After R rotor:        {self.after_R_rotor.decode('utf-8')}\n"
-            f"After M rotor:        {self.after_M_rotor.decode('utf-8')}\n"
-            f"After L rotor:        {self.after_L_rotor.decode('utf-8')}\n"
-            f"After reflector:      {self.after_reflector.decode('utf-8')}\n"
-            f"After L rotor back:   {self.after_L_rotor_back.decode('utf-8')}\n"
-            f"After M rotor back:   {self.after_M_rotor_back.decode('utf-8')}\n"
-            f"After R rotor back:   {self.after_R_rotor_back.decode('utf-8')}\n"
-            f"After plugboard 2:    {self.after_plugboard_2.decode('utf-8')}\n"
-            f"Output char:          {self.output_char.decode('utf-8')}"
+            f"Input char:        {d(self.input_char)}\n"
+            f"After plugboard 1: {d(self.after_plugboard_1)}\n"
+            f"After R rotor:     {d(self.after_R_rotor)}\n"
+            f"After M rotor:     {d(self.after_M_rotor)}\n"
+            f"After L rotor:     {d(self.after_L_rotor)}\n"
+            f"After reflector:   {d(self.after_reflector)}\n"
+            f"After L rotor back:{d(self.after_L_rotor_back)}\n"
+            f"After M rotor back:{d(self.after_M_rotor_back)}\n"
+            f"After R rotor back:{d(self.after_R_rotor_back)}\n"
+            f"After plugboard 2: {d(self.after_plugboard_2)}\n"
+            f"Output char:       {d(self.output_char)}"
         )
 
 
+class _Rotor(ctypes.Structure):
+    _fields_ = [
+        ('wiring',       ctypes.c_char * 26),
+        ('notch',        ctypes.c_char),
+        ('position',     ctypes.c_int),
+        ('ring_setting', ctypes.c_int),
+        ('name',         ctypes.c_char_p),
+    ]
+
+class _Reflector(ctypes.Structure):
+    _fields_ = [
+        ('wiring', ctypes.c_char * 26),
+        ('name',   ctypes.c_char_p),
+    ]
+
+class _Plugboard(ctypes.Structure):
+    _fields_ = [
+        ('wiring', ctypes.c_char * 26),
+    ]
+
+class _Enigma(ctypes.Structure):
+    _fields_ = [
+        ('rotors',    _Rotor * 3),
+        ('reflector', _Reflector),
+        ('plugboard', _Plugboard),
+    ]
+
+
+# scene
 class Enigma(Scene):
 
     def create_rotor(
         self,
-        wiring: Wiring,
+        wiring_str: str,
         outer_radius: float = 1.4,
         inner_radius: float = 1.2,
         font: str = "Iosevka",
         font_size: int = 20,
         letter_color: ManimColor = WHITE,
-        orientation: str = "upright",  # upright, radial, tangent
+        orientation: str = "upright", # upright, radial, tangent
     ) -> VGroup:
         # base annulus (the rotor face as a ring)
         ring = Annulus(inner_radius=inner_radius, outer_radius=outer_radius)
@@ -78,21 +109,16 @@ class Enigma(Scene):
         letters = VGroup()
         indices = VGroup()
 
-        r_mid = 0.5 * (inner_radius + outer_radius)
-        r_index = outer_radius + 0.15  # distance of the 0..25 labels from center
-        n = len(wiring.value)       # usually 26
+        r_mid   = 0.5 * (inner_radius + outer_radius)
+        r_index = outer_radius + 0.15 # distance of the 0..25 labels from the center
+        n       = len(wiring_str) # usually 26
 
-        for i, ch in enumerate(wiring.value):
-            # angle starts at top (PI/2) and goes clockwise (-i)
-            angle = (PI / 2) - i * (PI * 2 / n)
+        for i, ch in enumerate(wiring_str):
+            angle = (PI / 2) - i * (PI * 2 / n) # -i so clockwise
 
-            # position of the letter
             pos_letter = np.array([np.cos(angle), np.sin(angle), 0.0]) * r_mid
             t = Text(ch, font=font, font_size=font_size, weight=BOLD)
-            t.set_color(letter_color)
-            t.set_stroke(BLACK, width=0.6, opacity=0.7)
-
-            # optional orientation for letters
+            t.set_color(letter_color).set_stroke(BLACK, width=0.6, opacity=0.7)
             if orientation == "radial":
                 t.rotate(angle)
             elif orientation == "tangent":
@@ -100,350 +126,341 @@ class Enigma(Scene):
             t.move_to(pos_letter)
             letters.add(t)
 
-            # position of the numeric index (always upright)
             pos_index = np.array([np.cos(angle), np.sin(angle), 0.0]) * r_index
             idx = Text(str(i), font=font, font_size=int(font_size * 0.6), weight=BOLD)
-            idx.set_color(BLUE)
-            idx.set_stroke(BLACK, width=0.6, opacity=0.7)
+            idx.set_color(BLUE).set_stroke(BLACK, width=0.6, opacity=0.7)
             idx.move_to(pos_index)
             indices.add(idx)
 
-        # rotor[0] = ring, rotor[1] = highlight, rotor[2] = letters, rotor[3] = indices
         return VGroup(ring, highlight, letters, indices)
 
-
-
-    def update_content(
-        self,
-        current_object,
-        new_content,
-        content_type="text",
-        ):
-        """
-        function to update the content of a rotor/text object
-        """
-
+    def update_content(self, current_object, new_content, content_type="text"):
+        """ update the content of a rotor/text object """
         if content_type == "text":
             new_object = Text(new_content, font_size=16, font="Iosevka")
             new_object.set_color_by_gradient(RED, BLUE, GREEN)
         elif content_type == "rotor":
-            new_object = self.create_rotor(new_content)
+            new_object = self.create_rotor(new_content) # new_content is a wiring string
         else:
-            raise ValueError(f"content_type inesistente: {content_type}")
-
+            raise ValueError(f"content_type sconosciuto: {content_type}")
+        
         new_object.move_to(current_object)
         self.play(Transform(current_object, new_object))
         return current_object
 
     def construct(self):
-        # loading shared library
+        # load shared library
         try:
             so_file = "build/enigma.so"
-            enigma = ctypes.CDLL(so_file)
+            lib = ctypes.CDLL(so_file)
         except OSError as e:
             print(f"Error loading shared library: {e}")
             return
 
-        # specifying arg and return types of the trace_encrypt function
-        trace_encrypt = enigma.trace_encrypt;
-        trace_encrypt.restype = EncryptionSteps
-        trace_encrypt.argtypes = [ctypes.c_char];
+        # setup_enigma(Enigma *e) -> prompts user, fills struct
+        setup_enigma = lib.setup_enigma
+        setup_enigma.restype  = None
+        setup_enigma.argtypes = [ctypes.POINTER(_Enigma)]
 
-        # calling encrypt(char c)
-        print("Type a letter to encrypt (A-Z): ", end="")
+        # trace_encrypt(char c, Enigma *e) -> EncryptionSteps
+        trace_encrypt = lib.trace_encrypt
+        trace_encrypt.restype  = EncryptionSteps
+        trace_encrypt.argtypes = [ctypes.c_char, ctypes.POINTER(_Enigma)]
+
+        # configure machine interactvly
+        machine = _Enigma()
+        setup_enigma(ctypes.byref(machine))
+
+        # read back chosen names/wirings from the struct
+        r_name  = [machine.rotors[i].name.decode('utf-8') for i in range(3)]
+        r_wiring= [machine.rotors[i].wiring.decode('utf-8') for i in range(3)]
+        ref_name= machine.reflector.name.decode('utf-8')
+        ref_wir = machine.reflector.wiring.decode('utf-8')
+        plug_wir= machine.plugboard.wiring.decode('utf-8')
+        has_plugboard = (plug_wir != "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+        print("Type a letter to encrypt (A-Z): ", end="", flush=True)
         user_input = input().strip().upper()
-        steps = trace_encrypt(user_input.encode('utf-8'))
+        steps = trace_encrypt(user_input.encode('utf-8'), ctypes.byref(machine))
         print(steps)
 
-        # asking if proceeding with video
-        print("Animation? (y/n): ", end="")
-        proceed = input().strip().lower()
-
-        if proceed != 'y':
+        print("Animation? (y/n): ", end="", flush=True)
+        if input().strip().lower() != 'y':
             print("Aborting animation..")
             return
 
-        testo = Text("Benvenuto in questo esempio di animazione dell'attraversamento\nin avanti della macchina Enigma M3", font_size=24, font="Iosevka")
+        # intro slides
+        testo = Text(
+            "Benvenuto in questo esempio di animazione dell'attraversamento\n"
+            "in avanti della macchina Enigma M3",
+            font_size=24, font="Iosevka"
+        )
         testo.set_color_by_gradient(RED, BLUE, GREEN)
         self.play(Write(testo))
         self.wait(3)
-        self.update_content(testo, "Questo visualizzatore utilizza come rotore di destra il rotore III,\ncome rotore di mezzo il rotore II, e come ultimo il rotore I.")
+
+        self.update_content(
+            testo,
+            f"Questo visualizzatore utilizza come rotore di destra il {r_name[0]},\n"
+            f"come rotore di mezzo il {r_name[1]}, e come rotore sinistro il {r_name[2]}."
+        )
         self.wait(3)
-        self.update_content(testo, "L'animazione allo stato attuale non supporta il plugboard, e come riflettore usa il riflettore B")
+
+        plug_desc = (
+            "Il plugboard è configurato con scambi personalizzati"
+            if has_plugboard else
+            "Il plugboard non ha connessioni (nessuno scambio)"
+        )
+        self.update_content(
+            testo,
+            f"{plug_desc}.\nCome riflettore viene usato il {ref_name}."
+        )
         self.wait(3)
-        self.update_content(testo, "Quando l'utente preme una lettera, i rotori girano, e poi parte il segnale elettrico corrispondente a quella lettera")
+
+        self.update_content(
+            testo,
+            "Quando l'utente preme una lettera, i rotori girano,\n"
+            "e poi parte il segnale elettrico corrispondente a quella lettera"
+        )
         self.wait(3)
-        self.remove(testo) 
-        
+        self.remove(testo)
+
         testo2 = Text("Qui un'immagine di esempio di un rotore:", font_size=16, font="Iosevka")
         testo2.set_color_by_gradient(RED, BLUE, GREEN).shift(UP*2)
-        rotor_image = ImageMobject("imgs/cool_rotors.jpg") 
+        rotor_image = ImageMobject("imgs/cool_rotors.jpg")
         rotor_image.scale(1.8)
-
         self.play(Write(testo2))
         self.play(FadeIn(rotor_image), run_time=3)
         self.wait(3)
-
-        # Animate it disappearing before the rest of the visualization starts
         self.play(FadeOut(rotor_image))
         self.play(FadeOut(testo2))
 
-        input_char = steps.input_char.decode('utf-8')
-        after_R_rotor = steps.after_R_rotor.decode('utf-8')
+        # decode steps
+        d = lambda b: b.decode('utf-8')
+        input_char    = d(steps.input_char)
+        after_R_rotor = d(steps.after_R_rotor)
+        after_M_rotor = d(steps.after_M_rotor)
+        after_L_rotor = d(steps.after_L_rotor)
+        after_reflector = d(steps.after_reflector)
+        output_char   = d(steps.output_char)
 
-        # display text
-        t1 = Text(f"""Prendo il rotore III ({Wiring.ROTOR_III.value}) della macchina enigma\n
-            nella sua posizione iniziale (parto dall'indice 0)
-            """,
-            font_size=16, font="Iosevka")
-        t1.set_color_by_gradient(RED, BLUE, GREEN)
-        t1.shift(UP)
+        # plugboard in
+        after_plug1 = d(steps.after_plugboard_1)
+        t1 = Text(
+            f"Prima del rotore di destra, il segnale passa per il plugboard.\n"
+            f"'{input_char}' → '{after_plug1}'"
+            + ("  (nessuno scambio)" if input_char == after_plug1 else "  (scambiato!)"),
+            font_size=16, font="Iosevka"
+        )
+        t1.set_color_by_gradient(RED, BLUE, GREEN).shift(UP)
         self.play(Write(t1))
         self.wait(3)
 
-        # display right rotor
-        rotor_r: VGroup = self.create_rotor(Wiring.ROTOR_III)
+        # right rotor
+        self.update_content(
+            t1,
+            f"Prendo il {r_name[0]} ({r_wiring[0]})\nnella sua posizione iniziale (indice 0)",
+            "text"
+        )
+        self.wait(3)
+
+        rotor_r = self.create_rotor(r_wiring[0])
         rotor_r.shift(DOWN)
         self.play(FadeIn(rotor_r))
         self.wait(3)
 
-        # display pressing letter, and stepping mechanism
-        self.update_content(t1, f"""
-            Ora premo il tasto '{input_char}'.\nIl rotore di destra, avanza sempre di una posizione,\nprima che il segnale elettrico parta
-            """, "text")
-        self.wait(3) 
-        
+        self.update_content(
+            t1,
+            f"Ora premo il tasto '{input_char}'.\n"
+            f"Il rotore di destra avanza sempre di una posizione\n"
+            f"prima che il segnale elettrico parta",
+            "text"
+        )
+        self.wait(3)
+
         input_char_t = Text(input_char, font_size=16, font="Iosevka")
-        input_char_t.set_color_by_gradient(RED, ORANGE)
-        input_char_t.shift(RIGHT*1.5)
+        input_char_t.set_color_by_gradient(RED, ORANGE).shift(RIGHT*1.5)
         self.play(Write(input_char_t))
-        
-        # displayng what happens after stepping
-        idx_input = character_alphabet_index(input_char)
+
+        idx_input = character_alphabet_index(after_plug1)
         idx_input_stepped = (idx_input + 1) % 26
         char_at_stepped = alphabet_character_at_index(idx_input_stepped)
-        self.update_content(t1, f"Questa rotazione sposta il corpo del rotore di 1/26 di giro", "text")
+
+        self.update_content(t1, "Questa rotazione sposta il corpo del rotore di 1/26 di giro", "text")
+        self.wait(3)
+        self.update_content(t1, "Il risultato è che i cablaggi interni non sono più allineati come prima:", "text")
+        self.wait(3)
+        self.update_content(
+            t1,
+            f"L'ingresso '{after_plug1}'\nnon si connette più al pin '{after_plug1}'({idx_input}),\n"
+            f"ma a quello successivo modulo26, il pin '{char_at_stepped}'({idx_input_stepped})",
+            "text"
+        )
+        self.wait(3)
+        self.update_content(
+            t1,
+            f"Entra il segnale di '{after_plug1}' (idx{idx_input}),\n"
+            f"ma a causa dello step il segnale segue il cablaggio al pin {idx_input_stepped} ({idx_input}+1 mod26)",
+            "text"
+        )
+        self.wait(3)
+        self.update_content(
+            t1,
+            f"Il cablaggio del {r_name[0]} al nuovo indice {idx_input_stepped} ha la lettera {r_wiring[0][idx_input_stepped]}",
+            "text"
+        )
         self.wait(3)
 
-        self.update_content(t1, f"Il risultato è che i cablaggi interni\n non sono più allineati come prima:", "text")
-        self.wait(3)
-        
-        self.update_content(t1, f"L'ingresso '{input_char}'\nnon si connette più al pin '{input_char}'({idx_input}),\nma a quello successivo modulo26,\nil pin '{char_at_stepped}'({idx_input_stepped})", "text")
-        self.wait(3)
-        
-        self.update_content(t1, f"Entra il segnale della lettera '{input_char}' (idx{idx_input}),\nma a causa dello step, il segnale segue\nil percorso del cablaggio che parte dal pin all'indice {idx_input_stepped} ({idx_input} + 1 modulo 26)", "text")
-        self.wait(3)
-
-        self.update_content(t1, f"""
-            Il cablaggio del Rotore III al nuovo indice {idx_input_stepped} ha la lettera {Wiring.ROTOR_III.value[idx_input_stepped]}
-        """, "text")
-        self.wait(3)
-        
-        letter = rotor_r[2][idx_input_stepped].set_color(YELLOW) # rotor_r[2]: letters in VGroup
+        letter = rotor_r[2][idx_input_stepped]
         self.play(letter.animate.set_color(YELLOW))
         self.wait(3)
         self.play(letter.animate.set_color(WHITE))
         self.wait(3)
 
-        self.update_content(t1, f"Tuttavia anche l'uscita è sfalsata.\nIl segnale esce dal contatto {Wiring.ROTOR_III.value[idx_input_stepped]} (indice {character_alphabet_index(Wiring.ROTOR_III.value[idx_input_stepped])}),\nma siccome tutto il rotore è ruotato, va sottratto l'offset: {character_alphabet_index(Wiring.ROTOR_III.value[idx_input_stepped])} - 1 = {character_alphabet_index(after_R_rotor)}", "text")
-        self.wait(3)
-
-        self.update_content(t1, f"L'indice {character_alphabet_index(after_R_rotor)}, alfabeticamente corrisponde alla lettera '{after_R_rotor}'.\nQuindi, a causa di un singolo step, la lettera '{input_char}' è stata trasformata in '{after_R_rotor}'\ninvece che in '{Wiring.ROTOR_III.value[idx_input_stepped]}'.\nIl segnale '{after_R_rotor}' ora prosegue verso il rotore successivo", "text")
-        self.wait(3)
-
-        idx = Wiring.ROTOR_III.value.index(after_R_rotor)
-        letters = rotor_r[2]
-        letter_rotor = letters[idx]
-        self.play(
-            letter_rotor.animate.set_color(YELLOW),
+        self.update_content(
+            t1,
+            f"Tuttavia anche l'uscita è sfalsata.\n"
+            f"Il segnale esce dal contatto {r_wiring[0][idx_input_stepped]} (indice {character_alphabet_index(r_wiring[0][idx_input_stepped])}),\n"
+            f"ma siccome il rotore è ruotato va sottratto l'offset: → '{after_R_rotor}'",
+            "text"
         )
         self.wait(3)
-        
+        self.update_content(
+            t1,
+            f"Quindi '{input_char}' diventa '{after_R_rotor}' dopo il {r_name[0]}.\n"
+            f"Il segnale '{after_R_rotor}' ora prosegue verso il rotore successivo.",
+            "text"
+        )
+        self.wait(3)
+
+        idx = r_wiring[0].index(after_R_rotor)
+        letter_rotor = rotor_r[2][idx]
+        self.play(letter_rotor.animate.set_color(YELLOW))
+        self.wait(3)
         self.play(Transform(input_char_t, letter_rotor))
         self.wait(3)
-        
-        """
-        MIDDLE ROTOR
-        """
-        # saving new letter
+
+        # middle rotor
         self.update_content(
             t1,
             f"La stessa cosa ora succede per i rotori successivi,\n"
-              f"ma senza lo step in avanti (a meno che il rotore precedente\n"
-              f"non si trovi sulla tacca, il notch).",
+            f"ma senza lo step in avanti (a meno che il rotore precedente\nnon si trovi sulla tacca).",
             "text"
         )
         self.wait(3)
-        self.update_content(
-            t1,
-            f"""
-            Ora prendo il rotore di mezzo (rotore II):
-            """,
-            "text"
-        )
+        self.update_content(t1, f"Ora prendo il rotore di mezzo ({r_name[1]}):", "text")
 
-        # removing old rotor and creating new middle rotor
+        # removing old rotor and creating the new one
         self.remove(rotor_r, input_char_t)
         after_R_rotor_t = Text(after_R_rotor, font_size=16, font="Iosevka")
-        after_R_rotor_t.set_color_by_gradient(RED, ORANGE)
-        after_R_rotor_t.shift(RIGHT*1.5)
+        after_R_rotor_t.set_color_by_gradient(RED, ORANGE).shift(RIGHT*1.5)
         self.play(FadeIn(after_R_rotor_t))
 
-        rotor_m = self.create_rotor(Wiring.ROTOR_II)
+        rotor_m = self.create_rotor(r_wiring[1])
         rotor_m.shift(DOWN)
         self.play(FadeIn(rotor_m))
         self.wait(3)
-        
-        # letter enters middle rotor
-        after_M_rotor = steps.after_M_rotor.decode('utf-8')
+
         self.update_content(
             t1,
-            f"""
-            La lettera '{after_R_rotor}' ha indice alfabetico {character_alphabet_index(after_R_rotor)} e quindi entra
-            nella posizione di indice {character_alphabet_index(after_R_rotor)} del rotore, che corrisponde alla lettera
-            '{after_M_rotor}' sul rotore.
-            """,
+            f"La lettera '{after_R_rotor}' (indice {character_alphabet_index(after_R_rotor)}) entra nel rotore,\n"
+            f"e corrisponde alla lettera '{after_M_rotor}' sul {r_name[1]}.",
             "text"
         )
         self.wait(3)
-
 
         idx = character_alphabet_index(after_R_rotor)
-        letters = rotor_m[2]
-        indices = rotor_m[3]
-        letter_rotor = letters[idx]
-        index_label = indices[idx]
         self.play(
-            letter_rotor.animate.set_color(YELLOW),
-            index_label.animate.set_color(YELLOW),
+            rotor_m[2][idx].animate.set_color(YELLOW),
+            rotor_m[3][idx].animate.set_color(YELLOW),
         )
         self.wait(3)
-        
-        self.play(Transform(after_R_rotor_t, letter_rotor))
+        self.play(Transform(after_R_rotor_t, rotor_m[2][idx]))
         self.wait(3)
-        
 
+        # left rotor
+        self.update_content(t1, f"Infine prendo il rotore sinistro ({r_name[2]}):", "text")
 
-        """
-        LEFT ROTOR
-        """
-        # saving new letter
-        self.update_content(
-            t1,
-            f"""
-            Infine prendo il rotore più a sinistra (rotore I):
-            """,
-            "text"
-        )
-       
-        # removing old rotor and creating new left rotor
         self.remove(rotor_m, after_R_rotor_t)
         after_M_rotor_t = Text(after_M_rotor, font_size=16, font="Iosevka")
-        after_M_rotor_t.set_color_by_gradient(RED, ORANGE)
-        after_M_rotor_t.shift(RIGHT*1.5)
+        after_M_rotor_t.set_color_by_gradient(RED, ORANGE).shift(RIGHT*1.5)
         self.play(FadeIn(after_M_rotor_t))
 
-        rotor_l = self.create_rotor(Wiring.ROTOR_I)
+        rotor_l = self.create_rotor(r_wiring[2])
         rotor_l.shift(DOWN)
         self.play(FadeIn(rotor_l))
         self.wait(3)
-        
-        # letter enters left rotor
-        after_L_rotor = steps.after_L_rotor.decode('utf-8')
+
         self.update_content(
             t1,
-            f"""
-            La lettera '{after_M_rotor}' ha indice alfabetico {character_alphabet_index(after_M_rotor)} e quindi entra
-            nella posizione di indice {character_alphabet_index(after_M_rotor)} del rotore, che corrisponde alla lettera
-            '{after_L_rotor}' sul rotore.
-            """,
+            f"La lettera '{after_M_rotor}' (indice {character_alphabet_index(after_M_rotor)}) entra nel rotore,\n"
+            f"e corrisponde alla lettera '{after_L_rotor}' sul {r_name[2]}.",
             "text"
         )
         self.wait(3)
 
         idx = character_alphabet_index(after_M_rotor)
-        letters = rotor_l[2]
-        indices = rotor_l[3]
-        letter_rotor = letters[idx]
-        index_label = indices[idx]
         self.play(
-            letter_rotor.animate.set_color(YELLOW),
-            index_label.animate.set_color(YELLOW),
+            rotor_l[2][idx].animate.set_color(YELLOW),
+            rotor_l[3][idx].animate.set_color(YELLOW),
         )
         self.wait(3)
-        
-        self.play(Transform(after_M_rotor_t, letter_rotor))
+        self.play(Transform(after_M_rotor_t, rotor_l[2][idx]))
         self.wait(3)
 
-
-        """
-        REFLECTOR B
-        """
-        # saving new letter
+        # reflector
         self.update_content(
             t1,
-            f"""
-            Ora i tre rotori sono stati attraversati, e il segnale giunge al riflettore, in questo caso il riflettore 'B':
-            """,
+            f"Ora i tre rotori sono stati attraversati.\n"
+            f"Il segnale giunge al riflettore ({ref_name}):",
             "text"
         )
-       
-        # removing old rotor and creating reflector
+
         self.remove(rotor_l, after_M_rotor_t)
         after_L_rotor_t = Text(after_L_rotor, font_size=16, font="Iosevka")
-        after_L_rotor_t.set_color_by_gradient(RED, ORANGE)
-        after_L_rotor_t.shift(RIGHT*1.5)
+        after_L_rotor_t.set_color_by_gradient(RED, ORANGE).shift(RIGHT*1.5)
         self.play(FadeIn(after_L_rotor_t))
 
-        reflector = self.create_rotor(Wiring.REFLECTOR_B)
-        reflector.shift(DOWN)
-        self.play(FadeIn(reflector))
+        reflector_mob = self.create_rotor(ref_wir)
+        reflector_mob.shift(DOWN)
+        self.play(FadeIn(reflector_mob))
         self.wait(3)
-        
-        # letter enters reflector
-        after_reflector = steps.after_reflector.decode('utf-8')
+
         self.update_content(
             t1,
-            f"""
-            Il riflettore ha il semplice compito di invertire il percorso del segnale.
-            1) La lettera '{after_L_rotor}' (indice {character_alphabet_index(after_L_rotor)}) entra nel pin corrispondente.
-            2) Quel pin è cablato direttamente alla lettera '{after_reflector}'.
-            3) Il segnale ora torna indietro nei rotori, partendo dal contatto corrispondente a '{after_reflector}'.
-            """,
+            f"Il riflettore inverte il percorso del segnale.\n"
+            f"'{after_L_rotor}' (indice {character_alphabet_index(after_L_rotor)}) è cablato a '{after_reflector}'.\n"
+            f"Il segnale torna indietro nei rotori partendo da '{after_reflector}'.",
             "text"
         )
         self.wait(3)
 
         idx = character_alphabet_index(after_L_rotor)
-        letters = reflector[2]
-        indices = reflector[3]
-        letter_reflector = letters[idx]
-        index_label = indices[idx]
         self.play(
-            letter_reflector.animate.set_color(YELLOW),
-            index_label.animate.set_color(YELLOW),
+            reflector_mob[2][idx].animate.set_color(YELLOW),
+            reflector_mob[3][idx].animate.set_color(YELLOW),
         )
         self.wait(3)
-
-        self.play(Transform(after_L_rotor_t, letter_reflector))
+        self.play(Transform(after_L_rotor_t, reflector_mob[2][idx]))
         self.wait(3)
 
-        # ritorno attraverso i rotori e plugboard, fino alla lampadina finale
-        self.remove(reflector, after_L_rotor_t)
+        # return path..
+        self.remove(reflector_mob, after_L_rotor_t)
 
-        output_char = steps.output_char.decode('utf-8')
+        after_plug2 = d(steps.after_plugboard_2)
         self.update_content(
             t1,
-            "Una volta uscito dal riflettore, il segnale attraversa di nuovo i tre rotori in senso inverso,\n"
-            "passando prima dal rotore I, poi dal rotore II e infine dal rotore III,\nseguendo gli stessi cablaggi ma al contrario.",
+            f"Una volta uscito dal riflettore, il segnale attraversa di nuovo i tre rotori in senso inverso\n"
+            f"({r_name[2]} → {r_name[1]} → {r_name[0]}), seguendo gli stessi cablaggi ma al contrario.",
             "text"
         )
         self.wait(3)
 
         self.update_content(
             t1,
-            f"Dopo l'ultimo passaggio nel plugboard, il segnale arriva al pannello delle lampadine,\naccende la lampadina corrispondente alla lettera cifrata finale, che in questo caso è '{output_char}'.",
+            f"Dopo l'ultimo passaggio nel plugboard ('{d(steps.after_R_rotor_back)}' → '{after_plug2}'),\n"
+            f"il segnale arriva al pannello delle lampadine.\n"
+            f"La lettera cifrata finale è '{output_char}'.",
             "text"
         )
         self.wait(3)
-

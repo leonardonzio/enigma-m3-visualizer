@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 /* --------- constants + macros */
 #define ALPHABET_SIZE 26
@@ -235,28 +236,59 @@ choose_rotors (Rotor rotors[])
 }
 
 static void
-choose_plugboard (Plugboard *plugboard)
+choose_plugboard(Plugboard *plugboard)
 {
-    int choice;
+    strcpy(plugboard->wiring, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    int pair_count = 0;
 
-    printf("Choose the plugboard:\n\n");
-    printf("Available plugboard configurations:\n");
-    printf("1: no connections:\n");
-    printf("2: Q swapped with C");
-    printf("\n");
+    printf("Plugboard configuration:\n");
+    printf("Enter pairs of uppercase letters to swap (e.g., 'AB').\n");
+    printf("Up to 10 pairs.\nEnter '0' when done.\n");
 
-    printf("Choose plugboard (1-%zu): ", sizeof(PLUGBOARD_CONFIGS) / sizeof(PLUGBOARD_CONFIGS[0]));
-    scanf("%d", &choice);
+    char input[10];
+    while (pair_count < 10) {
+        printf("Pair to swap (or '0' to stop): ");
+        if (!fgets(input, sizeof(input), stdin))
+            break;
+        
+        // checking it's valid letter
+        input[strcspn(input, "\n")] = 0;
+        if (strcmp(input, "0") == 0)
+            break;
 
-    if (choice < 1 || choice > (int) (sizeof(PLUGBOARD_CONFIGS) / sizeof(PLUGBOARD_CONFIGS[0]))) {
-        printf("Invalid choice. Default is plugboard 1 (no connections).\n");
-        *plugboard = PLUGBOARD_CONFIGS[0];
-    } else {
-        *plugboard = PLUGBOARD_CONFIGS[choice - 1];
+        char a = toupper((unsigned char)input[0]);
+        char b = toupper((unsigned char)input[1]);
+
+        if (a < 'A' || a > 'Z' || b < 'A' || b > 'Z') {
+            printf("Invalid letters. Must be A-Z.\n");
+            continue;
+        }
+        if (a == b) {
+            printf("Cannot swap a letter with itself.\n");
+            continue;
+        }
+
+        int a_idx = C_TO_INDEX(a);
+        int b_idx = C_TO_INDEX(b);
+
+        // restore previous partners of a and b
+        char a_plug = plugboard->wiring[a_idx];
+        char b_plug = plugboard->wiring[b_idx];
+        if (a_plug != a) {
+            plugboard->wiring[C_TO_INDEX(a_plug)] = a_plug;
+            printf("Removed old pair: %c-%c\n", a, a_plug);
+        }
+        if (b_plug != b) {
+            plugboard->wiring[C_TO_INDEX(b_plug)] = b_plug;
+            printf("Removed old pair: %c-%c\n", b, b_plug);
+        }
+
+        // apply
+        plugboard->wiring[a_idx] = b;
+        plugboard->wiring[b_idx] = a;
+        pair_count++;
+        printf("Swapped %c <-> %c. (%d/10 pairs)\n", a, b, pair_count);
     }
-
-    int ch;
-    while ((ch = getchar()) != '\n' && ch != EOF);
 }
 
 static void
